@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Akuntansi - Voucher Kas Keluar</title>
+    
+    <!-- Pustaka Eksternal -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Pastikan Supabase dimuat sebelum app.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Tautan ke CSS Lokal -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gray-50 min-h-screen text-sm">
+
+    <!-- ================= PANEL AUTENTIKASI ================= -->
+    <div id="auth-view" class="flex min-h-screen items-center justify-center bg-gray-100">
+        <div class="w-full max-w-md bg-white rounded-lg shadow-md p-8">
+            <div class="text-center mb-6">
+                <i data-lucide="lock" class="w-12 h-12 mx-auto text-blue-600 mb-2"></i>
+                <h2 class="text-2xl font-bold text-gray-800">Login Sistem Akuntansi</h2>
+                <p class="text-gray-500 text-sm">Otentikasi Supabase</p>
+            </div>
+            
+            <div id="login-error" class="hidden bg-red-50 text-red-600 p-3 rounded mb-4 text-xs font-medium border border-red-200"></div>
+            
+            <form id="login-form" onsubmit="handleLogin(event)">
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="email">Email</label>
+                    <input id="email" type="email" required class="shadow-sm border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="mb-6">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="password">Password</label>
+                    <input id="password" type="password" required class="shadow-sm border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <button type="submit" id="btn-login" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition">
+                    Masuk
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= PANEL APLIKASI UTAMA ================= -->
+    <div id="app-view" class="hidden min-h-screen pb-12">
+        <!-- Header -->
+        <header class="bg-white shadow-sm px-6 py-4 flex justify-between items-center mb-6 border-b border-gray-200">
+            <div class="flex items-center space-x-2 text-blue-700 font-bold text-lg">
+                <i data-lucide="file-spreadsheet" class="w-6 h-6"></i>
+                <span>Modul Voucher Kas Keluar</span>
+            </div>
+            <div class="flex items-center space-x-4">
+                <span id="user-email-display" class="text-gray-600 text-sm font-medium"></span>
+                <button onclick="handleLogout()" class="flex items-center space-x-1 text-red-600 hover:bg-red-50 px-3 py-1.5 rounded transition">
+                    <i data-lucide="log-out" class="w-4 h-4"></i>
+                    <span>Keluar</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-6xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Kolom Kiri: Form Entri -->
+            <div class="lg:col-span-2 space-y-6">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">Entri Jurnal</h3>
+                    
+                    <div class="overflow-x-auto custom-scrollbar">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-gray-100 text-gray-700">
+                                    <th class="p-3 border font-semibold w-1/3">Akun</th>
+                                    <th class="p-3 border font-semibold">Debit (Rp)</th>
+                                    <th class="p-3 border font-semibold">Kredit (Rp)</th>
+                                    <th class="p-3 border font-semibold text-center w-12">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="entries-tbody">
+                                <!-- Baris jurnal dirender dari JS -->
+                            </tbody>
+                            <tfoot>
+                                <tr class="bg-gray-50 font-bold">
+                                    <td class="p-3 border text-right">Total:</td>
+                                    <td class="p-3 border text-blue-600" id="total-debit-display">0</td>
+                                    <td class="p-3 border text-blue-600" id="total-credit-display">0</td>
+                                    <td class="p-3 border"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    
+                    <button onclick="addEntry()" class="mt-4 flex items-center space-x-2 text-blue-600 hover:bg-blue-50 px-4 py-2 rounded border border-blue-200 transition">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                        <span>Tambah Baris</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Kolom Kanan: Validasi & Audit -->
+            <div class="space-y-6">
+                <!-- Panel Validasi PSAK -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">Prasyarat Submit</h3>
+                    <ul class="space-y-3" id="validation-list">
+                        <!-- Indikator validasi dirender dari JS -->
+                    </ul>
+
+                    <button id="btn-submit" disabled onclick="submitVoucher()" class="w-full mt-6 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded shadow transition flex justify-center items-center space-x-2">
+                        <i data-lucide="save" class="w-5 h-5"></i>
+                        <span>Simpan Voucher</span>
+                    </button>
+                </div>
+
+                <!-- Panel Audit Log -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2 flex items-center space-x-2">
+                        <i data-lucide="history" class="w-5 h-5"></i>
+                        <span>Riwayat Audit</span>
+                    </h3>
+                    <div id="audit-logs-container" class="space-y-4 max-h-64 overflow-y-auto custom-scrollbar">
+                        <p class="text-gray-400 italic text-sm text-center">Belum ada riwayat transaksi.</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Tautan ke Logika Aplikasi JS (Pastikan file app.js berada di folder yang sama) -->
+    <script src="app.js"></script>
+</body>
+</html>
