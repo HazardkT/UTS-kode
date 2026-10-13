@@ -1,0 +1,26 @@
+async function createStornoEntry(originalVoucherId, userId) {
+    // 1. Ambil data voucher asli
+    const { data: origVoucher } = await supabase
+        .from('vouchers')
+        .select('*, voucher_lines(*)')
+        .eq('id', originalVoucherId)
+        .single();
+
+    // 2. Buat Header Voucher Baru (Pembalik)
+    const newVoucher = {
+        description: `STORNO dari Voucher #${origVoucher.voucher_number}`,
+        status: 'POSTED',
+        created_by: userId,
+        // ... (buat hash_checksum baru)
+    };
+
+    // 3. Tukar posisi Debit & Kredit untuk setiap baris
+    const reversedLines = origVoucher.voucher_lines.map(line => ({
+        account: line.account,
+        debit: line.credit, // Tukar posisi
+        credit: line.debit  // Tukar posisi
+    }));
+
+    // 4. Simpan ke Database secara transaksional
+    // ...
+}
